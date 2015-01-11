@@ -14,7 +14,7 @@ The EZFusionAPI is a python class that makes using the Autodesk Fusion 360 API a
 
 <!-- /ABOUTSPONSOR -->
 ## Who Makes EZFusionAPI?
-[![Sponsor Website](https://img.shields.io/badge/sponsor-website-yellow.svg)](http://www.21stcenturywoodworking.com "21st Century Woodworking Home)
+[![Sponsor Website](https://img.shields.io/badge/sponsor-website-yellow.svg)](http://www.21stcenturywoodworking.com "21st Century Woodworking Home")
 
 The EZFusionAPI is being developed by maintained by 21st Century Woodworking LLC.  21st Century Woodworking LLC is a small company based out of Morgantown, WV and exists to provide woodworkers with the tools needed to use 21st century tools like CNC routers, lasers, and 3d printers into their shop and into their project workflows.  21st Century Woodworking LLC is working towards a "1 click print" capability for the woodworking world through the use of Fusion 360 and has been developing the EZFusionAPI as part of this effort.
 <!-- /ABOUTSPONSOR -->
