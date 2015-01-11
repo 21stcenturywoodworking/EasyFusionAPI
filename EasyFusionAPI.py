@@ -131,7 +131,6 @@ class EZFusionAPI:
 
 
 
-
          
 class EZSketch:
     '''
