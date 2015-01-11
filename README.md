@@ -26,7 +26,7 @@ Yes!  However, the time to develop this capability is valuable and we believe th
 and add features uppon request.  We also ask that you consider subsequent donation if obtaining a newer version.
 
 ## How is EZFusionAPI Licensed?
-[![Code License](https://img.shields.io/badge/code-license-yellow.svg)](https://github.com/dirktheeng/EZFusionAPI/blob/master/LICENSE)
+[![Code License](https://img.shields.io/badge/code-license-yellow.svg)](https://github.com/21stcenturywoodworking/EasyFusionAPI/blob/master/LICENSE)
 
 EZFusionAPI is covered under the GNU GPL v3.0 license.  We ask that you do not change the header in the code if it is used so that proper credit is given and copyright notice is given.  Any derivative work of this code must maintain a GNU GPL v3.0 license.
 
