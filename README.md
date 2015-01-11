@@ -14,7 +14,7 @@ The EZFusionAPI is a python class that makes using the Autodesk Fusion 360 API a
 
 <!-- /ABOUTSPONSOR -->
 ## Who Makes EZFusionAPI?
-[![Sponsor Website](https://img.shields.io/badge/sponsor-website-yellow.svg)](http://www.21stcenturywoodworking.com)
+[![Sponsor Website](https://img.shields.io/badge/sponsor-website-yellow.svg)](http://www.21stcenturywoodworking.com "21st Century Woodworking Home)
 
 The EZFusionAPI is being developed by maintained by 21st Century Woodworking LLC.  21st Century Woodworking LLC is a small company based out of Morgantown, WV and exists to provide woodworkers with the tools needed to use 21st century tools like CNC routers, lasers, and 3d printers into their shop and into their project workflows.  21st Century Woodworking LLC is working towards a "1 click print" capability for the woodworking world through the use of Fusion 360 and has been developing the EZFusionAPI as part of this effort.
 <!-- /ABOUTSPONSOR -->
@@ -26,7 +26,7 @@ Yes!  However, the time to develop this capability is valuable and we believe th
 and add features uppon request.  We also ask that you consider subsequent donation if obtaining a newer version.
 
 ## How is EZFusionAPI Licensed?
-[![Code License](https://img.shields.io/badge/code-license-yellow.svg)](https://github.com/21stcenturywoodworking/EasyFusionAPI/blob/master/LICENSE)
+[![Code License](https://img.shields.io/badge/code-license-yellow.svg)](https://github.com/21stcenturywoodworking/EasyFusionAPI/blob/master/LICENSE "GNU GPL V3.0")
 
 EZFusionAPI is covered under the GNU GPL v3.0 license.  We ask that you do not change the header in the code if it is used so that proper credit is given and copyright notice is given.  Any derivative work of this code must maintain a GNU GPL v3.0 license.
 
