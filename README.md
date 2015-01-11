@@ -3,7 +3,7 @@
 <!-- TITLE/ -->
 
 <!-- /SHORT DESCRIPTION -->
-Lightning Fast, Program Oriented Geometry Generation for Fusion 360 Through the Autodesk Python API 
+Fast, Program Oriented Geometry Generation for Fusion 360 Through the Autodesk Python API 
 <!-- /SHORT DESCRIPTION -->
 
 <!-- /DESCRIPTION -->
