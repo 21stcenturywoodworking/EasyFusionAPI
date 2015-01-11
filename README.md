@@ -20,7 +20,7 @@ The EZFusionAPI is being developed by maintained by 21st Century Woodworking LLC
 <!-- /ABOUTSPONSOR -->
 
 ## Is EZFusionAPI Free?
-[![PayPay donate button](https://img.shields.io/badge/paypal-donate-yellow.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=4RJ9CKBDMVYRY "Donate once-off to this project using Paypal")
+[![PayPay donate button](https://img.shields.io/badge/paypal-donate-yellow.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=4RJ9CKBDMVYRY "Donate to Keep Project Going")
 
 Yes!  However, the time to develop this capability is valuable and we believe that the EZFusionAPI will also save you valuable time in your end epplication as well.  We are offering this code at no cost and asking our users to consider supporting this work via donation to keep it growing.  We will do our best to respond to questions and provide user support
 and add features uppon request.  We also ask that you consider subsequent donation if obtaining a newer version.
