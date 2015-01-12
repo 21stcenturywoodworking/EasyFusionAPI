@@ -545,6 +545,118 @@ class Sketch_Create():
             line.isFixed=True
         return line
         
+    def curveChain(self,pointList,close = None):
+        '''
+        creates a chain of lines/arcs from a list of points
+        '''
+        pts = self._handleObjectsChecks(pointList)
+        ptList = []
+        cmdList = []
+        
+        for i in range(len(pts)-1):
+            if type(pts[i]) is adsk.core.Point3D:
+                ptList.append(pts[i])
+                if type(pts[i+1]) is str:
+                    if pts[i+1] == 'a' or pts[i+1] == 'arc':
+                        cmdList.append('a')
+                    else:
+                        cmdList.append('l')
+                elif type(pts[i]) is adsk.core.Point3D:
+                    cmdList.append('l')
+                else:
+                    raise Exception('pointList item type is invalid')
+        
+        if type(pts[-1]) is adsk.core.Point3D:
+            ptList.append(pts[-1])
+        
+        if close != None:
+            ptList.append(pts[0])
+            if close == 'a' or close == 'arc':
+                cmdList.append('a')
+            else:
+                cmdList.append('l')
+        
+        crvList = []
+        print(cmdList)
+        if len(ptList) < 2:
+            raise Exception('Need at least 2 points')
+            
+        if len(ptList) == 2 and close != None:
+            raise Exception('Need at least 3 points to create a closed profile')
+            
+        if cmdList[0] == 'a':
+            raise Exception('First curve cannot be an arc')
+        holdCOIN = False
+        for i,cmd in enumerate(cmdList):
+            
+            if cmd == 'l':
+                line = self.line(ptList[i],ptList[i+1])
+                if i == 0:
+                    line.startSketchPoint.isFixed = True
+                if i > 0:
+                    if cmdList[i-1] == 'a':
+                        line.startSketchPoint.isFixed = True
+                line.endSketchPoint.isFixed = True
+                crvList.append(line)
+            else:
+                prp1,prp2 = self.__parent__.__base__.Utils.findUnitPerpPoints(ptList[i-1],ptList[i])
+                
+                dp1 = ptList[i+1].distanceTo(prp1)
+                dp2 = ptList[i+1].distanceTo(prp2)
+                
+                if dp1 < dp2:
+                    cntr = prp1
+                else:
+                    cntr = prp2
+                
+                prp3,prp4 = self.__parent__.__base__.Utils.findUnitPerpPoints(ptList[i],cntr)
+                
+                dp3 = ptList[i-1].distanceTo(prp3)
+                dp4 = ptList[i-1].distanceTo(prp4)
+                
+                if dp3 == dp4:
+                    mp = self.__parent__.__base__.Utils.calcMidpoint(ptList[i],cntr)
+                    prp5,prp6 = self.__parent__.__base__.Utils.findUnitPerpPoints(ptList[i],mp)
+                    dp3 = ptList[i-1].distanceTo(prp5)
+                    dp4 = ptList[i-1].distanceTo(prp6)
+                
+                if dp3 > dp4:
+                    endpt = prp3
+                else:
+                    endpt = prp4
+                
+                x1 = cntr.x - ptList[i].x
+                y1 = cntr.y - ptList[i].y
+                
+                x2 = cntr.x - endpt.x
+                y2 = cntr.y - endpt.y
+                
+                sweepAng = math.acos((x1*x2 + y1*y2)/math.sqrt(x1*x1+y1*y1)/math.sqrt(x2*x2+y2*y2))
+                if cmdList[i-1] == 'a':
+                    pt = self.point(ptList[i])
+                    pt.isFixed = True
+                    self.__parent__.constrain.geometric([pt,crvList[-1].endSketchPoint],'coin')
+                    holdCOIN = True
+                arc = self.arc([cntr,ptList[i],sweepAng],'CSS')
+                self.__parent__.constrain.geometric([crvList[-1],arc],'tan')
+                crvList.append(arc)
+                
+            if i == len(cmdList)-1 and cmdList[-1] == 'l':
+                crvList[0].startSketchPoint.isFixed = False
+            
+            if i >0 and cmdList[i-1] != 'a':
+                self.__parent__.constrain.geometric([crvList[i-1].endSketchPoint,crvList[i].startSketchPoint],'coin')
+            elif i >0 and holdCOIN:
+                self.__parent__.constrain.geometric([pt,crvList[i].startSketchPoint],'coin')
+                holdCOIN = False
+            elif i >0 and holdCOIN == False:
+                self.__parent__.constrain.geometric([crvList[i-1].endSketchPoint,crvList[i].startSketchPoint],'coin')
+                
+        if close != None:
+            self.__parent__.constrain.geometric([crvList[-1].endSketchPoint,crvList[0].startSketchPoint],'coin')
+                
+                
+        
     def rectangle(self,points,rectType, fixPoint = None,orthogonal = True,axisAligned = True,sideDims = False,expressions=[None,None],construction = False):
         '''
         automates creating a rectangle
@@ -1114,12 +1226,21 @@ class UtilityOperations:
         
     def calcMidpoint(self,pt1,pt2):
         '''
-        calculates the midpoint between two sketchPoints
+        calculates the midpoint between two sketchPoint or point3D objects
         
         returns a Point3d object
         '''
-        #if pt1.objectType == 
-        return adsk.core.Point3D.create((pt1.geometry.x + pt2.geometry.x) / 2, (pt1.geometry.y + pt2.geometry.y) / 2, 0)
+        try:
+            pt1 = pt1.geometry
+        except:
+            pass
+        
+        try:
+            pt2 = pt2.geometry
+        except:
+            pass
+        
+        return adsk.core.Point3D.create((pt1.x + pt2.x) / 2, (pt1.y + pt2.y) / 2, 0)
         
     def createValueInput(self,dim,dimUnits):
         '''
@@ -1191,3 +1312,62 @@ class UtilityOperations:
                 lst[i] = self.tuple2Point3d(obj)
         return lst
                 
+    def findUnitPerpPoints(self,obj1,obj2=None, lineEnd = 'end'):
+        '''
+        finds 2 points that are perpendicular to a line
+        
+        the line can actually be a sketchLine if set to obj1
+        otherwise it can be 2 points that define a line from obj1 to obj2
+        in this case, obj1 and obj2 can be sketchPoint or point3D objects
+        
+        lineEnd is the end of the line to find perpendicular unit points
+        '''
+        if type(obj1) is adsk.fusion.SketchLine:
+            if lineEnd == 'end':
+                pt1 = obj1.startSketchPoint.geometry
+                pt2 = obj1.endSketchPoint.geometry
+            else:
+                pt2 = obj1.startSketchPoint.geometry
+                pt1 = obj1.endSketchPoint.geometry
+        elif (type(obj1) is adsk.core.Point3D or type(obj1) is adsk.fusion.SketchPoint) \
+            and (type(obj2) is adsk.core.Point3D or type(obj2) is adsk.fusion.SketchPoint):
+            
+            if lineEnd == 'end':
+                try:
+                    pt1 = obj1.geometry
+                except:
+                    pt1 = obj1
+                    
+                try:
+                    pt2 = obj2.geometry
+                except:
+                    pt2 = obj2
+            else:
+                try:
+                    pt2 = obj1.geometry
+                except:
+                    pt2 = obj1
+                    
+                try:
+                    pt1 = obj2.geometry
+                except:
+                    pt1 = obj2
+        else:
+            raise Exception('Unsupported type')
+            
+        dx = pt2.x - pt1.x
+        dy = pt2.y - pt1.y
+        
+        length = math.sqrt(dx*dx + dy*dy)
+        
+        out1 = pt2.copy()
+        out2 = pt2.copy()
+        
+        out1.x += dy/length
+        out1.y -= dx/length
+        
+        out2.x -= dy/length
+        out2.y += dx/length
+        
+        return out1,out2
+            
