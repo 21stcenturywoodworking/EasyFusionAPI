@@ -732,6 +732,7 @@ class Sketch_Create():
         pts = self._handleObjectsChecks(pointList)
         ptList = []
         cmdList = []
+        PI = self.__parent__.__base__._pi
         
         for i in range(len(pts)-1):
             if type(pts[i]) is adsk.core.Point3D:
@@ -772,26 +773,40 @@ class Sketch_Create():
                 if not self.__parent__.get.isPointInList(pt2,fixedPtList):
                     line.endSketchPoint.isFixed = True
                     fixedPtList.append(line.endSketchPoint)
+                if i>0 and self.__parent__.get.arePontsCoincident(line.startSketchPoint, prevLine.endSketchPoint):
+                    self.__parent__.constrain.geometric([line.startSketchPoint,prevLine.endSketchPoint],'coin')
                 crvList.append(line)
+                prevLine = line
             else:
                 crvList.append('arc')
-                
         for i,crv in enumerate(crvList):
             if crv == 'arc':
-                if i>0 and type(crvList[i-1]) is adsk.fusion.SketchLine:
+                if i>0 and type(crvList[i-1]) is adsk.fusion.SketchLine: # case where previous curve is a line
                     # grab handle from previous line
                     line = crvList[i-1]
                     
+                    allPts = []
+                    
+                    for Int in range(i - 1):
+                        allPts.append(crvList[Int].startSketchPoint)
+                        allPts.append(crvList[Int].endSketchPoint)
+                    
+                    if self.__parent__.get.isPointInList(line.endSketchPoint,allPts):
+                        lineStart = line.startSketchPoint
+                        lineEnd = line.endSketchPoint
+                    else:
+                        lineStart = line.endSketchPoint
+                        lineEnd = line.startSketchPoint
                     #Set the start point for the arc
                     startPoint =  line.endSketchPoint
                     
                     #calculate a guess point on the ark that is just past the tip of the line
-                    vect = self.__parent__.vector.fromPoints(line.startSketchPoint,line.endSketchPoint)
+                    vect = self.__parent__.vector.fromPoints(lineStart,lineEnd)
                     unitVect = self.__parent__.vector.unitVector(vect)
                     length = self.__parent__.vector.magnitude(vect)
                     length += self.__parent__.__base__.smallNumber * 100
-                    scaledVect = self.__parent__.vector.scaleVector(unitVect,length)
-                    guessPointOnAcr = self.__parent__.vector.addVectorAndPoint(scaledVect,line.endSketchPoint)
+                    scaledVect = self.__parent__.vector.scaleVector(unitVect,-length)
+                    guessPointOnAcr = self.__parent__.vector.addVectorAndPoint(scaledVect,lineEnd)
                     
                     # get the end point of the arc
                     if i == len(crvList) - 1: # this is the case if an ark is the last command
@@ -808,24 +823,119 @@ class Sketch_Create():
                         else: # case where next element is an ark
                             endPoint = self.point(ptList[i+1])
                             if not self.__parent__.get.isPointInList(endPoint,fixedPtList):
-                                line.endSketchPoint.isFixed = True
+                                endPoint.isFixed = True
                                 fixedPtList.append(endPoint)
-                        
-                    #create the ark based on end points and guess point
+                                    #create the ark based on end points and guess point
                     arc = self.arc([startPoint,guessPointOnAcr,endPoint],'3p')
                     
                     # add tangent constraint
                     self.__parent__.constrain.geometric([arc,line],'tan')
+                    crvList[i] = arc
+                else: #case where previous curve is an arc
                     
+                    # grab handle to previous ark
+                    prevArc = crvList[i-1]
                     
+                    allPts = []
+                    
+                    for Int in range(i - 1):
+                        allPts.append(crvList[Int].startSketchPoint)
+                        allPts.append(crvList[Int].endSketchPoint)
+                    
+                    if self.__parent__.get.isPointInList(prevArc.startSketchPoint,allPts):
+                        forward = True
+                    else:
+                        forward = False
                         
+                    
+                    if forward:
+                        prevStartPt = prevArc.startSketchPoint
+                        prevCntrPt = prevArc.centerSketchPoint
+                        prevEndPt = prevArc.endSketchPoint
+                    else:
+                        prevStartPt = prevArc.endSketchPoint
+                        prevCntrPt = prevArc.centerSketchPoint
+                        prevEndPt = prevArc.startSketchPoint
+                        
+                    # Set the start point for the arc
+                    startPoint = prevEndPt
+                    
+                    #calculate a guess point on the ark that is just past the end of previous arc
+                    startVect = self.__parent__.vector.fromPoints(prevCntrPt,prevStartPt)
+                    endVect = self.__parent__.vector.fromPoints(prevCntrPt,prevEndPt)
+                
+                    
+                    cross = self.__parent__.vector.crossProduct(startVect,endVect)
+
+                    prevRadius = prevArc.radius
+                    prevLength = prevArc.length
+
+                    if prevLength/(PI*prevRadius*2) > 0.5:
+                        rev = True
+                    else:
+                        rev = False
                         
                     
+                    perpVect = self.__parent__.vector.perpendicularUnitVector(endVect)
+                    #perpVect = self.__parent__.vector.scaleVector(perpVect,-1)
+                    perpVect = self.__parent__.vector.scaleVector(perpVect,self.__parent__.__base__.smallNumber * 100)
+                    guessPointOnAcr1 = self.__parent__.vector.addVectorAndPoint(perpVect,prevEndPt)
                     
-                
-                
-                
-                
+                    perpVect = self.__parent__.vector.perpendicularUnitVector(endVect)
+                    perpVect = self.__parent__.vector.scaleVector(perpVect,-1)
+                    perpVect = self.__parent__.vector.scaleVector(perpVect,self.__parent__.__base__.smallNumber * 100)
+                    guessPointOnAcr2 = self.__parent__.vector.addVectorAndPoint(perpVect,prevEndPt)
+                    
+                    gVect1 = self.__parent__.vector.fromPoints(prevCntrPt,guessPointOnAcr1)
+                    gVect2 = self.__parent__.vector.fromPoints(prevCntrPt,guessPointOnAcr2)
+                    
+                    A = self.__parent__.vector.sweptAngle(startVect,endVect)
+                    A1 = self.__parent__.vector.sweptAngle(startVect,gVect1)
+                    A2 = self.__parent__.vector.sweptAngle(startVect,gVect2)
+                    
+                    if rev:
+                        if A1 < A:
+                            guessPointOnAcr = guessPointOnAcr1
+                        else:
+                            guessPointOnAcr = guessPointOnAcr2
+                    else:
+                        if A1 > A:
+                            guessPointOnAcr = guessPointOnAcr1
+                        else:
+                            guessPointOnAcr = guessPointOnAcr2
+
+                    print(rev)
+#                    perpVect = self.__parent__.vector.perpendicularUnitVector(endVect)
+#                    #perpVect = self.__parent__.vector.scaleVector(perpVect,-1)
+#                    perpVect = self.__parent__.vector.scaleVector(perpVect,self.__parent__.__base__.smallNumber * 100)
+#                    guessPointOnAcr = self.__parent__.vector.addVectorAndPoint(perpVect,prevEndPt)
+                    
+            
+                    
+                    # get the end point of the arc
+                    if i == len(crvList) - 1: # this is the case if an ark is the last command
+                        if close == 'arc' or close == 'a':
+                            endPoint = crvList[0].startSketchPoint
+                        else:
+                            endPoint = self.point(ptList[-1])
+                            if not self.__parent__.get.isPointInList(endPoint,fixedPtList):
+                                line.endSketchPoint.isFixed = True
+                                fixedPtList.append(endPoint)
+                    else:
+                        if type(crvList[i+1]) is adsk.fusion.SketchLine:  # case where next element is a line
+                            endPoint = crvList[i+1].startSketchPoint
+                        else: # case where next element is an ark
+                            endPoint = self.point(ptList[i+1])
+                            if not self.__parent__.get.isPointInList(endPoint,fixedPtList):
+                                endPoint.isFixed = True
+                                fixedPtList.append(endPoint)
+                                
+                    arc = self.arc([startPoint,guessPointOnAcr,endPoint],'3p')
+                    
+                    # add tangent constraint
+                    self.__parent__.constrain.geometric([arc,prevArc],'tan')
+                    crvList[i] = arc
+                    
                 
         
     def rectangle(self,points,rectType, fixPoint = None,orthogonal = True,axisAligned = True,sideDims = False,expressions=[None,None],construction = False):
