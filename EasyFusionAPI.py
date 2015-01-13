@@ -168,6 +168,7 @@ class EZSketch:
         self.constrain = Sketch_Constrain(self)
         self.set = Sketch_Set(self)
         self.get = Sketch_Get(self)
+        self.vector = Sketch_Vector(self)
         
     def _create_Sketch(self, name = None, visibility = True, startCurveConstruction = False):
         '''
@@ -243,25 +244,38 @@ class Sketch_Get():
     def arePontsCoincident(self,pt1,pt2):
         '''
         checks to see if two skets points are coincident
-        pt1 is a sketchPoint or Point3d object in the sketch reference
-        pt2 is a sketchPoint or Point3d object in the sketch reference
+        pt1 is a sketchPoint or Point3d object or tuple of coordinates
+        pt2 is a sketchPoint or Point3d object or tuple of coordinates
         '''
-        if type(pt1) is not adsk.core.Point3D:
-            pt1 = pt1.geometry
-        if type(pt2) is not adsk.core.Point3D:
-            pt2 = pt2.geometry
+        pt1 = self.point3d(pt1)
+        pt2 = self.point3d(pt2)
         return pt1.isEqualTo(pt2)
+        
+    def isPointInList(self,pt, ptList):
+        '''
+        checks to see if a point in in a list of points
+        pt is a sketchPoint or Point3d object or tuple of coordinates
+        ptList is a python List of points where every element is either
+        a sketchPoint or Point3d object or tuple of coordinates
+        '''
+        
+        pt = self.point3d(pt)
+        if len(ptList) == 0:
+            return False
+        for ref in ptList:
+            ref = self.point3d(ref)
+            if self.arePontsCoincident(ref,pt):
+                return True
+        return False
         
     def slopeBetweenPoints(self,pt1,pt2):
         '''
         calculates the slope of a line between two points
-        pt1 is a sketchPoint or Point3d object in the sketch reference
-        pt2 is a sketchPoint or Point3d object in the sketch reference
+        pt1 is a sketchPoint or Point3d object or tuple of coordinates
+        pt2 is a sketchPoint or Point3d object or tuple of coordinates
         '''
-        if type(pt1) is not adsk.core.Point3D:
-            pt1 = pt1.geometry
-        if type(pt2) is not adsk.core.Point3D:
-            pt2 = pt2.geometry
+        pt1 = self.point3d(pt1)
+        pt2 = self.point3d(pt2)
             
         if pt1.x == pt2.x:
             return float('inf')
@@ -296,7 +310,173 @@ class Sketch_Get():
         elif abs(s1 - s2) < self.__parent__.__base__.smallNumber:
             return True
         else:
-            return False        
+            return False
+            
+    def point3d(self,pt):
+        '''
+        makes sure pt is a point3d object
+        
+        pt can be a point3D object or SketchPoint object or a tuple of coordinates
+        '''
+        if type(pt) is tuple:
+            for i in pt:
+                if not isinstance(pt[i],(int,float)):
+                    raise Exception('tuple elements must be numbers')
+            if len(pt) == 2:
+                return adsk.core.Point3D.create(pt[0],pt[1],0)
+            elif len(pt) == 3:
+                return adsk.core.Point3D.create(pt[0],pt[1],pt[2])
+            else:
+                raise Exception('tuple must be of length 2 or 3')
+                    
+        elif type(pt) is adsk.core.Point3D or type(pt) is adsk.fusion.SketchPoint:
+            try:
+                pt = pt.geometry
+            except:
+                pass
+            
+            return pt
+        else:
+            raise Exception('pt must be of type Point3D or SketchPoint')
+
+class Sketch_Vector():
+    def __init__(self,parent):
+        self.__parent__ = parent
+    
+    def unitVector(self,vect):
+        '''
+        returns a unit vector pointing from pt1 to pt2
+        
+        pt1 is a sketchPoint or Point3d object or tuple of coordinates
+        pt2 is a sketchPoint or Point3d object or tuple of coordinates
+        '''
+        
+        length = self.magnitude(vect)
+        
+        return vect[0]/length, vect[1]/length
+        
+    def fromPoints(self,pt1,pt2):
+        '''
+        calculates the vector pointing from pt1 to pt2
+        
+        pt1 is a sketchPoint or Point3d object or tuple of coordinates
+        pt2 is a sketchPoint or Point3d object or tuple of coordinates
+        
+        returns a vector
+        '''
+        pt1 = self.__parent__.get.point3d(pt1)
+        pt2 = self.__parent__.get.point3d(pt2)
+        
+        pt1x = pt1.x
+        pt1y = pt1.y
+        
+        pt2x = pt2.x
+        pt2y = pt2.y
+        
+        dx = pt2x - pt1x
+        dy = pt2y - pt1y
+        
+        return dx,dy
+        
+    def magnitude(self,vect):
+        '''
+        returns the magnitude of a vector
+        vect is a tuple/list that contains the x and y components of the vecor
+        
+        returns a scalar
+        '''
+        return math.sqrt(vect[0]**2 + vect[1]**2)
+        
+    def addVectorAndPoint(self,vect,pt):
+        '''
+        adds a vector to a point
+        pt is a sketchPoint or Point3d object or tuple of coordinates
+        vect is a tupel/list that contains the x and y components of the vector
+        
+        returns a Point3D object
+        '''
+        pt = self.__parent__.get.point3d(pt)
+        newPt = pt.copy()
+        newPt.x += vect[0]
+        newPt.y += vect[1]
+        return newPt
+        
+    def perpendicularUnitVector(self,vect):
+        '''
+        calculates a unit vector that is perpendicular to the vector input
+        
+        vect is a tupel/list that contains the x and y components of the vector
+        
+        returns a vector
+        '''
+        length = self.magnitude(vect)
+        return vect[1]/length,-vect[0]/length
+        
+    def dotProduct(self,v1,v2):
+        '''
+        calculates the dot product between v1 and v2
+        
+        v1 and v2 are tupels/lists that contains the x and y components of the vectors
+        
+        returns the scalar dot product
+        '''
+        return v1[0] * v2[0] + v1[1] * v2[1]
+        
+    def crossProduct(self,v1,v2):
+        '''
+        calculates the cross product between v1 and v2
+        
+        v1 and v2 are tupels/lists that contains the x and y components of the vectors
+        
+        returns the scalar cross product
+        '''
+        return v1[0] * v2[1] - v1[1] * v2[0]
+        
+    def sweptAngle(self,v1,v2):
+        '''
+        calculates the angle between v1 and v2
+        '''
+        cosTheta = self.dotProduct(v1,v2)/self.magnitude(v1)/self.magnitude(v2)
+        
+        return math.acos(cosTheta)
+        
+    def arePerpendicular(self,v1,v2):
+        '''
+        checks to see if v1 and v2 are perpendicular
+        
+        v1 and v2 are tupels/lists that contains the x and y components of the vectors
+
+        returns a bool        
+        '''
+        if self.dotProduct(v1,v2) <= self.__parent__.__base__.smallNumber:
+            return True
+        else:
+            return False
+            
+    def areParallel(self,v1,v2):
+        '''
+        checks to see if v1 and v2 are parallel
+        
+        v1 and v2 are tupels/lists that contains the x and y components of the vectors
+
+        returns a bool        
+        '''
+        
+        if self.crossProduct(v1,v2) <= self.__parent__.__base__.smallNumber:
+            return True
+        else:
+            return False
+            
+    def scaleVector(self,vect,scale):
+        '''
+        scales a vector
+        
+        vect is a tupel/list that contains the x and y components of the vector
+        scale is the scale factor
+        
+        returns a vector
+        '''
+        return vect[0]*scale, vect[1]*scale
         
 class Sketch_Constrain():
     '''
@@ -577,83 +757,74 @@ class Sketch_Create():
                 cmdList.append('l')
         
         crvList = []
-        print(cmdList)
-        if len(ptList) < 2:
-            raise Exception('Need at least 2 points')
-            
-        if len(ptList) == 2 and close != None:
-            raise Exception('Need at least 3 points to create a closed profile')
-            
-        if cmdList[0] == 'a':
-            raise Exception('First curve cannot be an arc')
-        holdCOIN = False
+        if cmdList[0] != 'l':
+            raise Exception('First geterated element must be a line')
+        
+        fixedPtList = []
         for i,cmd in enumerate(cmdList):
-            
             if cmd == 'l':
-                line = self.line(ptList[i],ptList[i+1])
-                if i == 0:
+                pt1 = ptList[i]
+                pt2 = ptList[i+1]
+                line = self.line(pt1,pt2)
+                if not self.__parent__.get.isPointInList(pt1,fixedPtList):
                     line.startSketchPoint.isFixed = True
-                if i > 0:
-                    if cmdList[i-1] == 'a':
-                        line.startSketchPoint.isFixed = True
-                line.endSketchPoint.isFixed = True
+                    fixedPtList.append(line.startSketchPoint)
+                if not self.__parent__.get.isPointInList(pt2,fixedPtList):
+                    line.endSketchPoint.isFixed = True
+                    fixedPtList.append(line.endSketchPoint)
                 crvList.append(line)
             else:
-                prp1,prp2 = self.__parent__.__base__.Utils.findUnitPerpPoints(ptList[i-1],ptList[i])
+                crvList.append('arc')
                 
-                dp1 = ptList[i+1].distanceTo(prp1)
-                dp2 = ptList[i+1].distanceTo(prp2)
+        for i,crv in enumerate(crvList):
+            if crv == 'arc':
+                if i>0 and type(crvList[i-1]) is adsk.fusion.SketchLine:
+                    # grab handle from previous line
+                    line = crvList[i-1]
+                    
+                    #Set the start point for the arc
+                    startPoint =  line.endSketchPoint
+                    
+                    #calculate a guess point on the ark that is just past the tip of the line
+                    vect = self.__parent__.vector.fromPoints(line.startSketchPoint,line.endSketchPoint)
+                    unitVect = self.__parent__.vector.unitVector(vect)
+                    length = self.__parent__.vector.magnitude(vect)
+                    length += self.__parent__.__base__.smallNumber * 100
+                    scaledVect = self.__parent__.vector.scaleVector(unitVect,length)
+                    guessPointOnAcr = self.__parent__.vector.addVectorAndPoint(scaledVect,line.endSketchPoint)
+                    
+                    # get the end point of the arc
+                    if i == len(crvList) - 1: # this is the case if an ark is the last command
+                        if close == 'arc' or close == 'a':
+                            endPoint = crvList[0].startSketchPoint
+                        else:
+                            endPoint = self.point(ptList[-1])
+                            if not self.__parent__.get.isPointInList(endPoint,fixedPtList):
+                                line.endSketchPoint.isFixed = True
+                                fixedPtList.append(endPoint)
+                    else:
+                        if type(crvList[i+1]) is adsk.fusion.SketchLine:  # case where next element is a line
+                            endPoint = crvList[i+1].startSketchPoint
+                        else: # case where next element is an ark
+                            endPoint = self.point(ptList[i+1])
+                            if not self.__parent__.get.isPointInList(endPoint,fixedPtList):
+                                line.endSketchPoint.isFixed = True
+                                fixedPtList.append(endPoint)
+                        
+                    #create the ark based on end points and guess point
+                    arc = self.arc([startPoint,guessPointOnAcr,endPoint],'3p')
+                    
+                    # add tangent constraint
+                    self.__parent__.constrain.geometric([arc,line],'tan')
+                    
+                    
+                        
+                        
+                    
+                    
                 
-                if dp1 < dp2:
-                    cntr = prp1
-                else:
-                    cntr = prp2
                 
-                prp3,prp4 = self.__parent__.__base__.Utils.findUnitPerpPoints(ptList[i],cntr)
                 
-                dp3 = ptList[i-1].distanceTo(prp3)
-                dp4 = ptList[i-1].distanceTo(prp4)
-                
-                if dp3 == dp4:
-                    mp = self.__parent__.__base__.Utils.calcMidpoint(ptList[i],cntr)
-                    prp5,prp6 = self.__parent__.__base__.Utils.findUnitPerpPoints(ptList[i],mp)
-                    dp3 = ptList[i-1].distanceTo(prp5)
-                    dp4 = ptList[i-1].distanceTo(prp6)
-                
-                if dp3 > dp4:
-                    endpt = prp3
-                else:
-                    endpt = prp4
-                
-                x1 = cntr.x - ptList[i].x
-                y1 = cntr.y - ptList[i].y
-                
-                x2 = cntr.x - endpt.x
-                y2 = cntr.y - endpt.y
-                
-                sweepAng = math.acos((x1*x2 + y1*y2)/math.sqrt(x1*x1+y1*y1)/math.sqrt(x2*x2+y2*y2))
-                if cmdList[i-1] == 'a':
-                    pt = self.point(ptList[i])
-                    pt.isFixed = True
-                    self.__parent__.constrain.geometric([pt,crvList[-1].endSketchPoint],'coin')
-                    holdCOIN = True
-                arc = self.arc([cntr,ptList[i],sweepAng],'CSS')
-                self.__parent__.constrain.geometric([crvList[-1],arc],'tan')
-                crvList.append(arc)
-                
-            if i == len(cmdList)-1 and cmdList[-1] == 'l':
-                crvList[0].startSketchPoint.isFixed = False
-            
-            if i >0 and cmdList[i-1] != 'a':
-                self.__parent__.constrain.geometric([crvList[i-1].endSketchPoint,crvList[i].startSketchPoint],'coin')
-            elif i >0 and holdCOIN:
-                self.__parent__.constrain.geometric([pt,crvList[i].startSketchPoint],'coin')
-                holdCOIN = False
-            elif i >0 and holdCOIN == False:
-                self.__parent__.constrain.geometric([crvList[i-1].endSketchPoint,crvList[i].startSketchPoint],'coin')
-                
-        if close != None:
-            self.__parent__.constrain.geometric([crvList[-1].endSketchPoint,crvList[0].startSketchPoint],'coin')
                 
                 
         
@@ -808,7 +979,7 @@ class Sketch_Create():
         automates the process of creating an arc
         objects is a single object or a list of objects, points can be defined as a tuple, sketchPoint, or Point3D
         arcType is the type of arc to create
-        -ThreePoint or 3p where 3 points are supplied that are on the arc
+        -ThreePoint or 3p where 3 points are supplied that are on the arc (startpoint, point, endpont)
         -CenterStartSweep or CSS where 3 points are given that are ordered by center, start point, end point
         -Fillet or F where two pairs of sketLine, Point3d are supplied
         radius sets the radius of the arc defaults to 1
@@ -1370,4 +1541,3 @@ class UtilityOperations:
         out2.y += dx/length
         
         return out1,out2
-            
